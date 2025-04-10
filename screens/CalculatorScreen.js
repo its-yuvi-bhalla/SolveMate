@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,116 +6,174 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
-} from 'react-native'
+} from 'react-native';
 
-const { width } = Dimensions.get('window')
-const BUTTON_SIZE = width * 0.22
-const BUTTON_MARGIN = width * 0.02
+const { width } = Dimensions.get('window');
+const GAP = width * 0.02;
+const BTN_SIZE = (width - GAP * 5) / 4;
 
 const CalculatorScreen = () => {
-  const [displayValue, setDisplayValue] = useState('0')
-  const [previousValue, setPreviousValue] = useState(null)
-  const [operator, setOperator] = useState(null)
-  const [expression, setExpression] = useState('')
+  const [value, setValue] = useState('');
+  const [prev, setPrev] = useState(null);
+  const [op, setOp] = useState(null);
+  const [expression, setExpression] = useState('');
+  const [justOp, setJustOp] = useState(false);
+  const [justEqual, setJustEqual] = useState(false);
+  const [showExpr, setShowExpr] = useState(false);
 
-  const handlePress = (value) => {
-    if (value === '⌫') {
-      setDisplayValue((prev) => (prev.length > 1 ? prev.slice(0, -1) : '0'))
-    } else if (value === '±') {
-      setDisplayValue((prev) =>
-        prev.startsWith('-') ? prev.slice(1) : `-${prev}`
-      )
-    } else if (value === '%') {
-      setDisplayValue((prev) => (parseFloat(prev) / 100).toString())
-    } else if (value === '.') {
-      if (!displayValue.includes('.')) {
-        setDisplayValue(displayValue + '.')
-      }
-    } else if (['÷', '×', '−', '+'].includes(value)) {
-      setPreviousValue(displayValue)
-      setOperator(value)
-      setExpression(`${displayValue} ${value}`)
-      setDisplayValue('0')
-    } else if (value === '=') {
-      const a = parseFloat(previousValue)
-      const b = parseFloat(displayValue)
-      let result = 0
+  const evaluate = () => {
+    const a = parseFloat(prev);
+    const b = parseFloat(value);
+    if (isNaN(a) || isNaN(b)) return '';
 
-      switch (operator) {
-        case '+': result = a + b; break;
-        case '−': result = a - b; break;
-        case '×': result = a * b; break;
-        case '÷': result = a / b; break;
-        default: return
-      }
+    let result = 0;
+    if (op === '+') result = a + b;
+    else if (op === '−') result = a - b;
+    else if (op === '×') result = a * b;
+    else if (op === '÷') result = b !== 0 ? a / b : 'Err';
 
-      const fullExpr = `${expression} ${displayValue} =`
-      setDisplayValue(result % 1 === 0 ? result.toString() : result.toFixed(2))
-      setExpression(fullExpr)
-      setPreviousValue(null)
-      setOperator(null)
-    } else {
-      setDisplayValue((prev) => (prev === '0' ? value : prev + value))
+    return isFinite(result) ? result.toString() : 'Err';
+  };
+
+  const handlePress = (key) => {
+    if (key === 'AC') {
+      setValue('');
+      setPrev(null);
+      setOp(null);
+      setExpression('');
+      setJustOp(false);
+      setJustEqual(false);
+      setShowExpr(false);
+      return;
     }
-  }
 
-  const buttons = [
-    ['⌫', '±', '%', '÷'],
+    if (key === '⌫') {
+      setValue(prev => (prev.length > 1 ? prev.slice(0, -1) : ''));
+      return;
+    }
+
+    if (key === '±') {
+      setValue(prev => (parseFloat(prev) === 0 || prev === '') ? '' : (prev.startsWith('-') ? prev.slice(1) : '-' + prev));
+      return;
+    }
+
+    if (key === '%') {
+      setValue(prev => (parseFloat(prev) / 100).toFixed(4));
+      return;
+    }
+
+    if (key === '.') {
+      setValue(prev => {
+        if (justOp) {
+          setJustOp(false);
+          return '0.';
+        }
+        if (justEqual) {
+          setJustEqual(false);
+          return prev.includes('.') ? prev : prev + '.';
+        }
+        if (prev.includes('.')) return prev;
+        return prev === '' ? '0.' : prev + '.';
+      });
+      return;
+    }
+
+    if (['÷', '×', '−', '+'].includes(key)) {
+      if (value === '') return;
+      if (op && !justOp) {
+        const result = evaluate();
+        setPrev(result);
+        setValue('');
+        setOp(key);
+        setExpression(result + ' ' + key);
+        setShowExpr(true);
+        setJustOp(true);
+        return;
+      }
+
+      if (!op) {
+        setPrev(value);
+        setValue('');
+        setOp(key);
+        setExpression(value + ' ' + key);
+        setShowExpr(true);
+        setJustOp(true);
+        return;
+      }
+
+      setOp(key);
+      setValue('');
+      setExpression(prev + ' ' + key);
+      setShowExpr(true);
+      return;
+    }
+
+    if (key === '=') {
+      if (!op || prev === null || value === '') return;
+      const result = evaluate();
+      setValue(result);
+      setExpression(prev + ' ' + op + ' ' + value + ' =');
+      setPrev(result);
+      setOp(null);
+      setJustOp(false);
+      setJustEqual(true);
+      setShowExpr(true);
+      return;
+    }
+
+    setValue(prev => {
+      if (justOp) {
+        setJustOp(false);
+        return key;
+      }
+      if (justEqual) {
+        setJustEqual(false);
+        return prev + key;
+      }
+      return prev + key;
+    });
+  };
+
+  const keys = [
+    ['AC', '±', '%', '÷'],
     ['7', '8', '9', '×'],
     ['4', '5', '6', '−'],
     ['1', '2', '3', '+'],
-    ['0', '.', '='],
-  ]
+    ['0', '.', '⌫', '='],
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.displayContainer}>
-        {expression !== '' && (
-          <Text style={styles.expressionText}>{expression}</Text>
+        {showExpr && expression !== '' && (
+          <Text style={styles.expression}>{expression}</Text>
         )}
-        <Text
-          style={styles.displayText}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.5}
-        >
-          {displayValue}
+        <Text style={styles.result} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
         </Text>
       </View>
 
-      <View style={styles.buttonsContainer}>
-        {buttons.map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.buttonRow}>
-            {row.map((label, index) => (
+      <View style={styles.buttonGrid}>
+        {keys.map((row, rowIndex) => (
+          <View key={rowIndex} style={styles.row}>
+            {row.map((btn, btnIndex) => (
               <TouchableOpacity
-                key={index}
-                onPress={() => handlePress(label)}
-                style={[
-                  styles.button,
-                  label === '0' && row.length === 3 && index === 0 && styles.doubleButton,
-                  isOperator(label) && styles.operatorButton,
-                  isFunction(label) && styles.functionButton,
-                ]}
+                key={btnIndex}
+                onPress={() => handlePress(btn)}
+                style={[styles.key, isOp(btn) && styles.opKey, isFunc(btn) && styles.funcKey]}
               >
-                <Text
-                  style={[
-                    styles.buttonText,
-                    isFunction(label) && styles.functionText,
-                  ]}
-                >
-                  {label}
-                </Text>
+                <Text style={[styles.keyText, isFunc(btn) && styles.funcText]}>{btn}</Text>
               </TouchableOpacity>
             ))}
           </View>
         ))}
       </View>
     </SafeAreaView>
-  )
-}
+  );
+};
 
-const isOperator = (val) => ['÷', '×', '−', '+', '='].includes(val)
-const isFunction = (val) => ['⌫', '±', '%'].includes(val)
+const isOp = (val) => ['÷', '×', '−', '+', '='].includes(val);
+const isFunc = (val) => ['AC', '±', '%', '⌫'].includes(val);
 
 const styles = StyleSheet.create({
   container: {
@@ -125,57 +183,50 @@ const styles = StyleSheet.create({
   displayContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    padding: 20,
   },
-  expressionText: {
-    color: '#888',
+  expression: {
+    color: '#fff',
     fontSize: 28,
     textAlign: 'right',
   },
-  displayText: {
+  result: {
     color: '#fff',
     fontSize: 72,
     textAlign: 'right',
     fontWeight: '400',
   },
-  buttonsContainer: {
-    paddingHorizontal: BUTTON_MARGIN,
-    paddingBottom: BUTTON_MARGIN,
+  buttonGrid: {
+    paddingHorizontal: GAP,
+    paddingBottom: GAP,
   },
-  buttonRow: {
+  row: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: BUTTON_MARGIN,
+    justifyContent: 'space-between',
+    marginBottom: GAP,
   },
-  button: {
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
+  key: {
+    width: BTN_SIZE,
+    height: BTN_SIZE,
+    borderRadius: BTN_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: BUTTON_MARGIN / 2,
     backgroundColor: '#333',
   },
-  doubleButton: {
-    width: BUTTON_SIZE * 2 + BUTTON_MARGIN,
-    alignItems: 'flex-start',
-    paddingLeft: BUTTON_SIZE * 0.3,
+  opKey: {
+    backgroundColor: '#ff8c00',
   },
-  operatorButton: {
-    backgroundColor: '#32cd32',
-  },
-  functionButton: {
+  funcKey: {
     backgroundColor: '#a5a5a5',
   },
-  buttonText: {
+  keyText: {
     color: '#fff',
     fontSize: 34,
     fontWeight: '400',
   },
-  functionText: {
+  funcText: {
     color: '#000',
   },
-})
+});
 
-export default CalculatorScreen
+export default CalculatorScreen;

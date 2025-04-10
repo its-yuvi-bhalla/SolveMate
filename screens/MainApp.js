@@ -13,7 +13,7 @@ export default function MainApp() {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: { backgroundColor: '#111' },
-        tabBarActiveTintColor: '#32cd32',
+        tabBarActiveTintColor: '#ff8c00',
         tabBarInactiveTintColor: '#fff',
         tabBarIcon: ({ color, size }) => {
           let iconName;

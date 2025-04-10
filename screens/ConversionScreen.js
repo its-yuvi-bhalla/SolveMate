@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   convertButton: {
-    backgroundColor: '#32cd32',
+    backgroundColor: '#ff8c00',
     padding: 15,
     borderRadius: 999,
     alignItems: 'center',
